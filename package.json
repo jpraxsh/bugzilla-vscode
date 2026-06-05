@@ -1,6 +1,6 @@
 {
-  "name": "bugzilla-vscode",
-  "displayName": "Bugzilla Explorer",
+  "name": "bugzilla-vscode-plugin",
+  "displayName": "Bugzilla Plugin",
   "description": "Manage Bugzilla bugs from within VS Code",
   "version": "0.0.1",
   "publisher": "jpraxsh",
@@ -25,14 +25,14 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "bugzilla-explorer",
-          "title": "Bugzilla Explorer",
+          "id": "bugzilla-plugin",
+          "title": "Bugzilla Plugin",
           "icon": "$(bug)"
         }
       ]
     },
     "views": {
-      "bugzilla-explorer": [
+      "bugzilla-plugin": [
         {
           "id": "bugzilla-assigned-bugs",
           "name": "Assigned to Me"

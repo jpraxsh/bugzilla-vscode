@@ -1,4 +1,4 @@
-# Bugzilla Explorer
+# Bugzilla Plugin
 
 Manage Bugzilla bugs from within VS Code. View assigned bugs, read comments, and update bug status — all without leaving your editor.
 
@@ -32,7 +32,7 @@ npx vsce package
 2. Install in VS Code:
 
 ```bash
-code --install-extension bugzilla-vscode-0.1.0.vsix
+code --install-extension bugzilla-vscode-plugin-0.0.1.vsix
 ```
 
 ## Setup
@@ -46,7 +46,7 @@ code --install-extension bugzilla-vscode-0.1.0.vsix
 
 ### Configuring the Extension
 
-1. Click the **Bugzilla Explorer** bug icon in the activity bar
+1. Click the **Bugzilla Plugin** bug icon in the activity bar
 2. Click the **key icon** in the tree view header (or run `Bugzilla: Set Credentials`)
 3. Enter your Bugzilla Base URL (e.g. `https://bugzilla.example.com`)
 4. Enter your API Key
