@@ -1,0 +1,82 @@
+{
+  "name": "bugzilla-vscode",
+  "displayName": "Bugzilla Explorer",
+  "description": "Manage Bugzilla bugs from within VS Code",
+  "version": "0.1.0",
+  "publisher": "bugzilla-vscode",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:bugzilla-assigned-bugs"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "bugzilla-explorer",
+          "title": "Bugzilla Explorer",
+          "icon": "$(bug)"
+        }
+      ]
+    },
+    "views": {
+      "bugzilla-explorer": [
+        {
+          "id": "bugzilla-assigned-bugs",
+          "name": "Assigned to Me"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "bugzilla.setCredentials",
+        "title": "Set Bugzilla Credentials"
+      },
+      {
+        "command": "bugzilla.refreshBugs",
+        "title": "Refresh Bugs",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "bugzilla.showBugDetails",
+        "title": "Show Bug Details"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "bugzilla.setCredentials",
+          "when": "view == bugzilla-assigned-bugs",
+          "group": "navigation"
+        },
+        {
+          "command": "bugzilla.refreshBugs",
+          "when": "view == bugzilla-assigned-bugs",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "bugzilla.showBugDetails",
+          "when": "view == bugzilla-assigned-bugs && viewItem == bugTreeItem"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.3.0"
+  }
+}
