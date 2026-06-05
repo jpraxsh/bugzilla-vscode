@@ -73,10 +73,10 @@ export class BugTreeDataProvider implements vscode.TreeDataProvider<BugTreeItem>
     }
 
     try {
-      const user = await client.whoami();
-      this.outputChannel.appendLine(`Bugzilla: Connected as ${user.real_name} (${user.email})`);
+      const email = client.email;
+      this.outputChannel.appendLine(`Bugzilla: Connected as ${email}`);
 
-      const bugs = await client.getAssignedBugs(user.email);
+      const bugs = await client.getAssignedBugs(email);
       this.outputChannel.appendLine(`Bugzilla: Found ${bugs.length} assigned bug(s)`);
 
       if (bugs.length === 0) {

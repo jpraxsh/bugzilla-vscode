@@ -1,11 +1,5 @@
 import { z } from 'zod';
 
-export const whoamiResponseSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  real_name: z.string(),
-});
-
 export const bugSchema = z.object({
   id: z.number(),
   summary: z.string(),
@@ -27,6 +21,11 @@ export const commentSchema = z.object({
   text: z.string(),
   creator: z.string(),
   creation_time: z.string(),
+  time: z.string(),
+  count: z.number(),
+  attachment_id: z.number().nullable(),
+  is_private: z.boolean(),
+  tags: z.array(z.string()),
 });
 
 export const commentSearchResponseSchema = z.object({
@@ -36,21 +35,18 @@ export const commentSearchResponseSchema = z.object({
   ),
 });
 
-export const statusUpdateResponseSchema = z.object({
+export const updateResponseSchema = z.object({
   bugs: z.array(
     z.object({
       id: z.number(),
       last_change_time: z.string(),
-      changes: z.object({
-        status: z.object({
-          removed: z.string(),
+      changes: z.record(
+        z.string(),
+        z.object({
           added: z.string(),
-        }).optional(),
-        resolution: z.object({
           removed: z.string(),
-          added: z.string(),
-        }).optional(),
-      }),
+        })
+      ),
     })
   ),
 });
@@ -59,7 +55,7 @@ export const urlSchema = z.string().url('Please enter a valid URL');
 
 export const apiKeySchema = z.string().min(1, 'API Key is required');
 
-export type WhoamiResponse = z.infer<typeof whoamiResponseSchema>;
+export const emailSchema = z.string().min(1, 'Email is required');
+
 export type Bug = z.infer<typeof bugSchema>;
 export type Comment = z.infer<typeof commentSchema>;
-export type StatusUpdateResponse = z.infer<typeof statusUpdateResponseSchema>;

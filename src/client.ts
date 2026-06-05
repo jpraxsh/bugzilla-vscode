@@ -1,19 +1,13 @@
 import { z } from 'zod';
 import {
   Bug,
-  WhoamiResponse,
   Comment,
-  whoamiResponseSchema,
   bugSearchResponseSchema,
   commentSearchResponseSchema,
-  statusUpdateResponseSchema,
+  updateResponseSchema,
 } from './schemas';
 
 export type { Bug, Comment } from './schemas';
-
-export interface BugzillaUser extends WhoamiResponse {
-  email: string;
-}
 
 export class BugzillaClientError extends Error {
   constructor(
@@ -31,10 +25,16 @@ const RETRY_DELAYS = [1000, 2000];
 export class BugzillaClient {
   private baseUrl: string;
   private apiKey: string;
+  private userEmail: string;
 
-  constructor(baseUrl: string, apiKey: string) {
+  constructor(baseUrl: string, apiKey: string, email: string) {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.apiKey = apiKey;
+    this.userEmail = email;
+  }
+
+  get email(): string {
+    return this.userEmail;
   }
 
   private async request<T>(
@@ -118,16 +118,12 @@ export class BugzillaClient {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async whoami(): Promise<BugzillaUser> {
-    const data = await this.request<WhoamiResponse>('/rest/whoami', whoamiResponseSchema);
-    return { ...data, email: data.name };
-  }
-
   async getAssignedBugs(email: string): Promise<Bug[]> {
     const params = new URLSearchParams({
       assigned_to: email,
-      status: 'NEW',
+      status: 'UNCONFIRMED',
     });
+    params.append('status', 'NEW');
     params.append('status', 'ASSIGNED');
     params.append('status', 'REOPENED');
 
@@ -155,14 +151,17 @@ export class BugzillaClient {
     status: string,
     resolution?: string
   ): Promise<void> {
-    const body: Record<string, string> = { status };
+    const body: Record<string, unknown> = {
+      ids: [bugId],
+      status,
+    };
     if (resolution) {
       body.resolution = resolution;
     }
 
     await this.request(
       `/rest/bug/${bugId}`,
-      statusUpdateResponseSchema,
+      updateResponseSchema,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

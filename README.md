@@ -50,6 +50,7 @@ code --install-extension bugzilla-vscode-0.1.0.vsix
 2. Click the **key icon** in the tree view header (or run `Bugzilla: Set Credentials`)
 3. Enter your Bugzilla Base URL (e.g. `https://bugzilla.example.com`)
 4. Enter your API Key
+5. Enter your Bugzilla email address (used to find bugs assigned to you)
 
 The extension connects automatically and loads your assigned bugs.
 

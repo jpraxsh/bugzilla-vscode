@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext): void {
     if (!creds) {
       return undefined;
     }
-    return new BugzillaClient(creds.baseUrl, creds.apiKey);
+    return new BugzillaClient(creds.baseUrl, creds.apiKey, creds.email);
   }
 
   webviewProvider.setUpdateHandler(async (bugId, status, resolution) => {

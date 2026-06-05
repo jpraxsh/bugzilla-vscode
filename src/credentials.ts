@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { urlSchema, apiKeySchema } from './schemas';
+import { urlSchema, apiKeySchema, emailSchema } from './schemas';
 
 const URL_KEY = 'bugzilla.baseUrl';
 const API_KEY_SECRET = 'bugzilla.apiKey';
+const EMAIL_KEY = 'bugzilla.email';
 
 export class CredentialsManager {
   constructor(private context: vscode.ExtensionContext) {}
@@ -49,8 +50,29 @@ export class CredentialsManager {
       return;
     }
 
+    const email = await vscode.window.showInputBox({
+      prompt: 'Enter your Bugzilla email address',
+      placeHolder: 'you@example.com',
+      ignoreFocusOut: true,
+      validateInput: (value) => {
+        if (!value) {
+          return 'Email is required';
+        }
+        const result = emailSchema.safeParse(value);
+        if (!result.success) {
+          return result.error.errors[0].message;
+        }
+        return null;
+      }
+    });
+
+    if (!email) {
+      return;
+    }
+
     await this.setBaseUrl(url);
     await this.setApiKey(apiKey);
+    await this.setEmail(email);
     vscode.window.showInformationMessage('Bugzilla credentials saved successfully.');
   }
 
@@ -62,6 +84,10 @@ export class CredentialsManager {
     await this.context.secrets.store(API_KEY_SECRET, apiKey);
   }
 
+  async setEmail(email: string): Promise<void> {
+    await this.context.globalState.update(EMAIL_KEY, email);
+  }
+
   getBaseUrl(): string | undefined {
     return this.context.globalState.get<string>(URL_KEY);
   }
@@ -70,25 +96,31 @@ export class CredentialsManager {
     return this.context.secrets.get(API_KEY_SECRET);
   }
 
-  async getCredentials(): Promise<{ baseUrl: string; apiKey: string } | undefined> {
+  getEmail(): string | undefined {
+    return this.context.globalState.get<string>(EMAIL_KEY);
+  }
+
+  async getCredentials(): Promise<{ baseUrl: string; apiKey: string; email: string } | undefined> {
     const baseUrl = this.getBaseUrl();
     const apiKey = await this.getApiKey();
+    const email = this.getEmail();
 
-    if (!baseUrl || !apiKey) {
+    if (!baseUrl || !apiKey || !email) {
       return undefined;
     }
 
     const normalizedUrl = baseUrl.replace(/\/+$/, '');
 
-    return { baseUrl: normalizedUrl, apiKey };
+    return { baseUrl: normalizedUrl, apiKey, email };
   }
 
   hasCredentials(): boolean {
-    return !!this.getBaseUrl();
+    return !!this.getBaseUrl() && !!this.getEmail();
   }
 
   async clearCredentials(): Promise<void> {
     await this.context.globalState.update(URL_KEY, undefined);
+    await this.context.globalState.update(EMAIL_KEY, undefined);
     await this.context.secrets.delete(API_KEY_SECRET);
     vscode.window.showInformationMessage('Bugzilla credentials cleared.');
   }
