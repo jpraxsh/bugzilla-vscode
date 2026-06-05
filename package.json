@@ -2,14 +2,19 @@
   "name": "bugzilla-vscode",
   "displayName": "Bugzilla Explorer",
   "description": "Manage Bugzilla bugs from within VS Code",
-  "version": "0.1.0",
-  "publisher": "bugzilla-vscode",
+  "version": "0.0.1",
+  "publisher": "jpraxsh",
   "engines": {
     "vscode": "^1.85.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jpraxsh/bugzilla-vscode.git"
   },
   "categories": [
     "Other"
   ],
+  "icon": "logo.ico",
   "activationEvents": [
     "onView:bugzilla-assigned-bugs",
     "onCommand:bugzilla.showBugWebview",
