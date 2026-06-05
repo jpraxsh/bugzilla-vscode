@@ -11,7 +11,9 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:bugzilla-assigned-bugs"
+    "onView:bugzilla-assigned-bugs",
+    "onCommand:bugzilla.showBugWebview",
+    "onCommand:bugzilla.clearCredentials"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -43,8 +45,13 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "bugzilla.showBugDetails",
+        "command": "bugzilla.showBugWebview",
         "title": "Show Bug Details"
+      },
+      {
+        "command": "bugzilla.clearCredentials",
+        "title": "Clear Credentials",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -58,11 +65,16 @@
           "command": "bugzilla.refreshBugs",
           "when": "view == bugzilla-assigned-bugs",
           "group": "navigation"
+        },
+        {
+          "command": "bugzilla.clearCredentials",
+          "when": "view == bugzilla-assigned-bugs",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "bugzilla.showBugDetails",
+          "command": "bugzilla.showBugWebview",
           "when": "view == bugzilla-assigned-bugs && viewItem == bugTreeItem"
         }
       ]
@@ -78,5 +90,8 @@
     "@types/vscode": "^1.85.0",
     "@types/node": "^18.0.0",
     "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
   }
 }

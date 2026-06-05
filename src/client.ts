@@ -1,29 +1,18 @@
-export interface BugzillaUser {
-  id: number;
-  name: string;
-  real_name: string;
+import { z } from 'zod';
+import {
+  Bug,
+  WhoamiResponse,
+  Comment,
+  whoamiResponseSchema,
+  bugSearchResponseSchema,
+  commentSearchResponseSchema,
+  statusUpdateResponseSchema,
+} from './schemas';
+
+export type { Bug, Comment } from './schemas';
+
+export interface BugzillaUser extends WhoamiResponse {
   email: string;
-}
-
-export interface Bug {
-  id: number;
-  summary: string;
-  severity: string;
-  priority: string;
-  status: string;
-  assigned_to: string;
-  product: string;
-  component: string;
-}
-
-interface WhoamiResponse {
-  id: number;
-  name: string;
-  real_name: string;
-}
-
-interface BugSearchResponse {
-  bugs: Bug[];
 }
 
 export class BugzillaClientError extends Error {
@@ -36,6 +25,9 @@ export class BugzillaClientError extends Error {
   }
 }
 
+const RETRY_MAX = 2;
+const RETRY_DELAYS = [1000, 2000];
+
 export class BugzillaClient {
   private baseUrl: string;
   private apiKey: string;
@@ -45,44 +37,90 @@ export class BugzillaClient {
     this.apiKey = apiKey;
   }
 
-  private async request<T>(path: string): Promise<T> {
+  private async request<T>(
+    path: string,
+    schema: z.ZodSchema<T>,
+    init?: RequestInit
+  ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       'X-BUGZILLA-API-KEY': this.apiKey,
       'Accept': 'application/json',
+      ...(init?.headers as Record<string, string> | undefined),
     };
 
-    let response: Response;
-    try {
-      response = await fetch(url, { headers });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      throw new BugzillaClientError(`Failed to connect to Bugzilla at ${this.baseUrl}: ${message}`);
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= RETRY_MAX; attempt++) {
+      let response: Response;
+      try {
+        response = await fetch(url, { ...init, headers });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        lastError = new BugzillaClientError(
+          `Failed to connect to Bugzilla at ${this.baseUrl}: ${message}`
+        );
+        if (attempt < RETRY_MAX) {
+          await this.delay(RETRY_DELAYS[attempt]);
+          continue;
+        }
+        throw lastError;
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new BugzillaClientError(
+            'Authentication failed. Please check your Bugzilla API Key.',
+            401
+          );
+        }
+        if (response.status === 404) {
+          throw new BugzillaClientError(
+            `Bugzilla endpoint not found at ${url}. Verify your Base URL.`,
+            404
+          );
+        }
+
+        // Retry on 5xx
+        if (response.status >= 500 && attempt < RETRY_MAX) {
+          await this.delay(RETRY_DELAYS[attempt]);
+          continue;
+        }
+
+        const body = await response.text().catch(() => '');
+        throw new BugzillaClientError(
+          `Bugzilla API error (${response.status}): ${body || response.statusText}`,
+          response.status
+        );
+      }
+
+      let raw: unknown;
+      try {
+        raw = await response.json();
+      } catch {
+        throw new BugzillaClientError('Failed to parse Bugzilla API response');
+      }
+
+      const result = schema.safeParse(raw);
+      if (!result.success) {
+        throw new BugzillaClientError(
+          `Unexpected API response format: ${result.error.message}`
+        );
+      }
+
+      return result.data;
     }
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new BugzillaClientError('Authentication failed. Please check your Bugzilla API Key.', 401);
-      }
-      if (response.status === 404) {
-        throw new BugzillaClientError(`Bugzilla endpoint not found at ${url}. Verify your Base URL.`, 404);
-      }
-      const body = await response.text().catch(() => '');
-      throw new BugzillaClientError(
-        `Bugzilla API error (${response.status}): ${body || response.statusText}`,
-        response.status
-      );
-    }
+    throw lastError ?? new BugzillaClientError('Request failed after retries');
+  }
 
-    return response.json() as Promise<T>;
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async whoami(): Promise<BugzillaUser> {
-    const data = await this.request<WhoamiResponse>('/rest/whoami');
-    return {
-      ...data,
-      email: data.name, // Bugzilla typically sets name to the email address
-    };
+    const data = await this.request<WhoamiResponse>('/rest/whoami', whoamiResponseSchema);
+    return { ...data, email: data.name };
   }
 
   async getAssignedBugs(email: string): Promise<Bug[]> {
@@ -93,7 +131,43 @@ export class BugzillaClient {
     params.append('status', 'ASSIGNED');
     params.append('status', 'REOPENED');
 
-    const data = await this.request<BugSearchResponse>(`/rest/bug?${params.toString()}`);
+    const data = await this.request<{ bugs: Bug[] }>(
+      `/rest/bug?${params.toString()}`,
+      bugSearchResponseSchema
+    );
     return data.bugs;
+  }
+
+  async getBugComments(bugId: number): Promise<Comment[]> {
+    const data = await this.request<{ bugs: Record<string, { comments: Comment[] }> }>(
+      `/rest/bug/${bugId}/comment`,
+      commentSearchResponseSchema
+    );
+    const bugComments = data.bugs[String(bugId)];
+    if (!bugComments) {
+      return [];
+    }
+    return bugComments.comments;
+  }
+
+  async updateBugStatus(
+    bugId: number,
+    status: string,
+    resolution?: string
+  ): Promise<void> {
+    const body: Record<string, string> = { status };
+    if (resolution) {
+      body.resolution = resolution;
+    }
+
+    await this.request(
+      `/rest/bug/${bugId}`,
+      statusUpdateResponseSchema,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    );
   }
 }

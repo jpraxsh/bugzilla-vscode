@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { urlSchema, apiKeySchema } from './schemas';
 
 const URL_KEY = 'bugzilla.baseUrl';
 const API_KEY_SECRET = 'bugzilla.apiKey';
@@ -10,14 +11,14 @@ export class CredentialsManager {
     const url = await vscode.window.showInputBox({
       prompt: 'Enter your Bugzilla Base URL',
       placeHolder: 'https://bugzilla.example.com',
+      ignoreFocusOut: true,
       validateInput: (value) => {
         if (!value) {
           return 'Base URL is required';
         }
-        try {
-          new URL(value);
-        } catch {
-          return 'Please enter a valid URL';
+        const result = urlSchema.safeParse(value);
+        if (!result.success) {
+          return result.error.errors[0].message;
         }
         return null;
       }
@@ -31,9 +32,14 @@ export class CredentialsManager {
       prompt: 'Enter your Bugzilla API Key',
       placeHolder: 'Your API Key',
       password: true,
+      ignoreFocusOut: true,
       validateInput: (value) => {
         if (!value) {
           return 'API Key is required';
+        }
+        const result = apiKeySchema.safeParse(value);
+        if (!result.success) {
+          return result.error.errors[0].message;
         }
         return null;
       }
@@ -72,7 +78,6 @@ export class CredentialsManager {
       return undefined;
     }
 
-    // Normalize trailing slash
     const normalizedUrl = baseUrl.replace(/\/+$/, '');
 
     return { baseUrl: normalizedUrl, apiKey };
@@ -85,5 +90,6 @@ export class CredentialsManager {
   async clearCredentials(): Promise<void> {
     await this.context.globalState.update(URL_KEY, undefined);
     await this.context.secrets.delete(API_KEY_SECRET);
+    vscode.window.showInformationMessage('Bugzilla credentials cleared.');
   }
 }

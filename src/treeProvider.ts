@@ -15,7 +15,7 @@ export class BugTreeItem extends vscode.TreeItem {
     this.iconPath = this.getSeverityIcon(bug.severity);
 
     this.command = {
-      command: 'bugzilla.showBugDetails',
+      command: 'bugzilla.showBugWebview',
       title: 'Show Bug Details',
       arguments: [bug]
     };
@@ -39,10 +39,14 @@ export class BugTreeItem extends vscode.TreeItem {
   }
 }
 
+type TreeData = BugTreeItem[] | undefined;
+
 export class BugTreeDataProvider implements vscode.TreeDataProvider<BugTreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<BugTreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+  private bugs: Bug[] = [];
+  private isLoading = false;
   private errorMessage: string | undefined;
 
   constructor(
@@ -50,23 +54,21 @@ export class BugTreeDataProvider implements vscode.TreeDataProvider<BugTreeItem>
     private outputChannel: vscode.OutputChannel
   ) {}
 
-  refresh(): void {
+  async refresh(): Promise<void> {
+    this.isLoading = true;
     this.errorMessage = undefined;
+    this._onDidChangeTreeData.fire();
+
+    const bugs = await this.loadBugs();
+    this.isLoading = false;
+    this.bugs = bugs;
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: BugTreeItem): vscode.TreeItem {
-    return element;
-  }
-
-  async getChildren(element?: BugTreeItem): Promise<BugTreeItem[]> {
-    if (element) {
-      return [];
-    }
-
+  private async loadBugs(): Promise<Bug[]> {
     const client = await this.getClient();
     if (!client) {
-      this.errorMessage = 'Not connected. Set your Bugzilla credentials first.';
+      this.errorMessage = 'Not connected. Click the key icon to set your Bugzilla credentials.';
       return [];
     }
 
@@ -79,10 +81,9 @@ export class BugTreeDataProvider implements vscode.TreeDataProvider<BugTreeItem>
 
       if (bugs.length === 0) {
         this.errorMessage = 'No bugs assigned to you.';
-        return [];
       }
 
-      return bugs.map((bug) => new BugTreeItem(bug));
+      return bugs;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.outputChannel.appendLine(`Bugzilla Error: ${message}`);
@@ -91,11 +92,45 @@ export class BugTreeDataProvider implements vscode.TreeDataProvider<BugTreeItem>
     }
   }
 
+  getTreeItem(element: BugTreeItem): vscode.TreeItem {
+    return element;
+  }
+
+  getChildren(element?: BugTreeItem): TreeData {
+    if (element) {
+      return [];
+    }
+
+    if (this.isLoading) {
+      const item = new vscode.TreeItem('Loading...');
+      item.iconPath = new vscode.ThemeIcon('loading~spin');
+      return [item as unknown as BugTreeItem];
+    }
+
+    if (this.errorMessage) {
+      const item = new vscode.TreeItem(this.errorMessage);
+      item.iconPath = new vscode.ThemeIcon('warning');
+      return [item as unknown as BugTreeItem];
+    }
+
+    if (this.bugs.length === 0) {
+      const item = new vscode.TreeItem('No bugs found');
+      item.iconPath = new vscode.ThemeIcon('check');
+      return [item as unknown as BugTreeItem];
+    }
+
+    return this.bugs.map((bug) => new BugTreeItem(bug));
+  }
+
   getParent(): undefined {
     return undefined;
   }
 
   getErrorMessage(): string | undefined {
     return this.errorMessage;
+  }
+
+  isLoadingBugs(): boolean {
+    return this.isLoading;
   }
 }
