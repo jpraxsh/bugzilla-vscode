@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Bug, Comment } from './client';
 
-const STATUSES = ['UNCONFIRMED', 'NEW', 'ASSIGNED', 'REOPENED', 'RESOLVED', 'VERIFIED', 'CLOSED'];
+const STATUSES = ['UNCONFIRMED','CONFIRMED', 'NEW', 'ASSIGNED', 'REOPENED', 'RESOLVED', 'VERIFIED', 'CLOSED'];
 const TERMINAL_STATUSES = ['RESOLVED', 'VERIFIED', 'CLOSED'];
 const RESOLUTIONS = ['', 'FIXED', 'INVALID', 'WONTFIX', 'DUPLICATE', 'WORKSFORME'];
 

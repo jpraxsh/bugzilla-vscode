@@ -123,6 +123,7 @@ export class BugzillaClient {
       assigned_to: email,
       status: 'UNCONFIRMED',
     });
+    params.append('status', 'CONFIRMED');
     params.append('status', 'NEW');
     params.append('status', 'ASSIGNED');
     params.append('status', 'REOPENED');
