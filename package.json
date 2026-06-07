@@ -42,20 +42,20 @@
     "commands": [
       {
         "command": "bugzilla.setCredentials",
-        "title": "Set Bugzilla Credentials"
+        "title": "Bugzilla: Set Credentials"
       },
       {
         "command": "bugzilla.refreshBugs",
-        "title": "Refresh Bugs",
+        "title": "Bugzilla: Refresh Bugs",
         "icon": "$(refresh)"
       },
       {
         "command": "bugzilla.showBugWebview",
-        "title": "Show Bug Details"
+        "title": "Bugzilla: Show Bug Details"
       },
       {
         "command": "bugzilla.clearCredentials",
-        "title": "Clear Credentials",
+        "title": "Bugzilla: Clear Credentials",
         "icon": "$(trash)"
       }
     ],
