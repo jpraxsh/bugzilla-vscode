@@ -42,7 +42,8 @@ export class BugzillaClient {
     schema: z.ZodSchema<T>,
     init?: RequestInit
   ): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
+    const separator = path.includes('?') ? '&' : '?';
+    const url = `${this.baseUrl}${path}${separator}api_key=${encodeURIComponent(this.apiKey)}`;
     const headers: Record<string, string> = {
       'X-BUGZILLA-API-KEY': this.apiKey,
       'Accept': 'application/json',

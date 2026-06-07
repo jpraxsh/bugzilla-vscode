@@ -296,7 +296,7 @@ export class BugWebviewProvider {
         <div class="comment">
           <div class="comment-header">
             <span class="comment-author">${this.escapeHtml(c.creator)}</span>
-            <span>${c.creation_time}</span>
+            <span>${new Date(c.creation_time).toLocaleString()}</span>
           </div>
           <div class="comment-text">${this.escapeHtml(c.text)}</div>
         </div>
