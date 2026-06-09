@@ -9,6 +9,8 @@ export const bugSchema = z.object({
   assigned_to: z.string(),
   product: z.string(),
   component: z.string(),
+  version: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
 });
 
 export const bugSearchResponseSchema = z.object({

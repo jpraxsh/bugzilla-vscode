@@ -3,6 +3,7 @@ import { CredentialsManager } from './credentials';
 import { BugzillaClient, Bug, BugzillaClientError, Comment } from './client';
 import { BugTreeDataProvider } from './treeProvider';
 import { BugWebviewProvider } from './bugWebview';
+import { FilterWebviewProvider } from './filterWebview';
 
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel('Bugzilla');
@@ -10,6 +11,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const credentials = new CredentialsManager(context);
   const webviewProvider = new BugWebviewProvider(context.extensionUri);
+  const filterWebviewProvider = new FilterWebviewProvider(context.extensionUri);
 
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.command = 'bugzilla.refreshBugs';
@@ -35,6 +37,16 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   const treeProvider = new BugTreeDataProvider(createClient, outputChannel);
+
+  filterWebviewProvider.setBugsProvider(() => treeProvider.getBugs());
+  filterWebviewProvider.setApplyHandler((state) => {
+    treeProvider.setFilter(state);
+    if (treeProvider.hasActiveFilter()) {
+      treeView.message = treeProvider.getFilterDescription();
+    } else {
+      treeView.message = '';
+    }
+  });
 
   const treeView = vscode.window.createTreeView('bugzilla-assigned-bugs', {
     treeDataProvider: treeProvider,
@@ -72,6 +84,19 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('bugzilla.refreshBugs', () => {
       treeProvider.refresh();
       updateStatusBar();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bugzilla.filterBugs', async () => {
+      filterWebviewProvider.show(treeProvider.getFilterState());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('bugzilla.clearFilter', () => {
+      treeProvider.clearFilter();
+      treeView.message = '';
     })
   );
 

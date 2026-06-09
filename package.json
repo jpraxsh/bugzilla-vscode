@@ -2,7 +2,7 @@
   "name": "bugzilla-vscode-plugin",
   "displayName": "Bugzilla Plugin",
   "description": "Manage Bugzilla bugs from within VS Code",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "jpraxsh",
   "engines": {
     "vscode": "^1.85.0"
@@ -50,6 +50,16 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "bugzilla.filterBugs",
+        "title": "Bugzilla: Filter Bugs",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "bugzilla.clearFilter",
+        "title": "Bugzilla: Clear Filter",
+        "icon": "$(clear-all)"
+      },
+      {
         "command": "bugzilla.showBugWebview",
         "title": "Bugzilla: Show Bug Details"
       },
@@ -69,6 +79,16 @@
         {
           "command": "bugzilla.refreshBugs",
           "when": "view == bugzilla-assigned-bugs",
+          "group": "navigation"
+        },
+        {
+          "command": "bugzilla.filterBugs",
+          "when": "view == bugzilla-assigned-bugs",
+          "group": "navigation"
+        },
+        {
+          "command": "bugzilla.clearFilter",
+          "when": "view == bugzilla-assigned-bugs && bugzilla.filterActive",
           "group": "navigation"
         },
         {
