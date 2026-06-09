@@ -1,16 +1,36 @@
 import * as vscode from 'vscode';
 import { Bug, BugzillaClient } from './client';
 
+export interface FilterState {
+  severities: string[];
+  keywords: string[];
+  versions: string[];
+  priorities: string[];
+  statuses: string[];
+  products: string[];
+  components: string[];
+}
+
 export class BugTreeItem extends vscode.TreeItem {
   constructor(
     public readonly bug: Bug
   ) {
     const label = `Bug ${bug.id}`;
-    const description = `${bug.summary} [${bug.severity}]`;
+    const parts = [bug.summary, `[${bug.severity}]`];
+    if (bug.keywords && bug.keywords.length > 0) {
+      parts.push(bug.keywords.map(k => `#${k}`).join(' '));
+    }
+    const description = parts.join(' ');
     super(label, vscode.TreeItemCollapsibleState.None);
 
     this.description = description;
     this.tooltip = `${bug.summary}\nStatus: ${bug.status}\nSeverity: ${bug.severity}\nPriority: ${bug.priority}\nProduct: ${bug.product}\nComponent: ${bug.component}`;
+    if (bug.version) {
+      this.tooltip += `\nVersion: ${bug.version}`;
+    }
+    if (bug.keywords && bug.keywords.length > 0) {
+      this.tooltip += `\nKeywords: ${bug.keywords.join(', ')}`;
+    }
     this.contextValue = 'bugTreeItem';
     this.iconPath = this.getSeverityIcon(bug.severity);
 
@@ -48,6 +68,7 @@ export class BugTreeDataProvider implements vscode.TreeDataProvider<BugTreeItem>
   private bugs: Bug[] = [];
   private isLoading = false;
   private errorMessage: string | undefined;
+  private filterState: FilterState = { severities: [], keywords: [], versions: [], priorities: [], statuses: [], products: [], components: [] };
 
   constructor(
     private getClient: () => Promise<BugzillaClient | undefined>,
@@ -113,13 +134,137 @@ export class BugTreeDataProvider implements vscode.TreeDataProvider<BugTreeItem>
       return [item as unknown as BugTreeItem];
     }
 
-    if (this.bugs.length === 0) {
-      const item = new vscode.TreeItem('No bugs found');
-      item.iconPath = new vscode.ThemeIcon('check');
+    const filtered = this.applyFilter(this.bugs);
+    if (filtered.length === 0) {
+      const message = this.hasActiveFilter()
+        ? 'No bugs match the current filter'
+        : 'No bugs found';
+      const item = new vscode.TreeItem(message);
+      item.iconPath = new vscode.ThemeIcon(this.hasActiveFilter() ? 'filter' : 'check');
       return [item as unknown as BugTreeItem];
     }
 
-    return this.bugs.map((bug) => new BugTreeItem(bug));
+    return filtered.map((bug) => new BugTreeItem(bug));
+  }
+
+  private applyFilter(bugs: Bug[]): Bug[] {
+    const { severities, keywords, versions, priorities, statuses, products, components } = this.filterState;
+
+    if (!this.hasActiveFilter()) {
+      return bugs;
+    }
+
+    return bugs.filter((bug) => {
+      if (severities.length > 0 && !severities.some(
+        (s) => s.toLowerCase() === bug.severity.toLowerCase()
+      )) {
+        return false;
+      }
+
+      if (priorities.length > 0 && !priorities.some(
+        (p) => p.toLowerCase() === bug.priority.toLowerCase()
+      )) {
+        return false;
+      }
+
+      if (statuses.length > 0 && !statuses.some(
+        (s) => s.toLowerCase() === bug.status.toLowerCase()
+      )) {
+        return false;
+      }
+
+      if (products.length > 0 && !products.some(
+        (p) => p.toLowerCase() === bug.product.toLowerCase()
+      )) {
+        return false;
+      }
+
+      if (components.length > 0 && !components.some(
+        (c) => c.toLowerCase() === bug.component.toLowerCase()
+      )) {
+        return false;
+      }
+
+      if (versions.length > 0 && !versions.some(
+        (v) => v.toLowerCase() === (bug.version || '').toLowerCase()
+      )) {
+        return false;
+      }
+
+      if (keywords.length > 0) {
+        const matchesKeyword = keywords.some((kw) => {
+          const lowerKw = kw.toLowerCase();
+          const inKeywords = bug.keywords?.some((bk) =>
+            bk.toLowerCase().includes(lowerKw)
+          );
+          const inSummary = bug.summary.toLowerCase().includes(lowerKw);
+          return inKeywords || inSummary;
+        });
+        if (!matchesKeyword) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  setFilter(state: FilterState): void {
+    this.filterState = state;
+    vscode.commands.executeCommand('setContext', 'bugzilla.filterActive', this.hasActiveFilter());
+    this._onDidChangeTreeData.fire();
+  }
+
+  clearFilter(): void {
+    this.filterState = { severities: [], keywords: [], versions: [], priorities: [], statuses: [], products: [], components: [] };
+    vscode.commands.executeCommand('setContext', 'bugzilla.filterActive', false);
+    this._onDidChangeTreeData.fire();
+  }
+
+  getFilterState(): FilterState {
+    return { ...this.filterState };
+  }
+
+  hasActiveFilter(): boolean {
+    return (
+      this.filterState.severities.length > 0 ||
+      this.filterState.keywords.length > 0 ||
+      this.filterState.versions.length > 0 ||
+      this.filterState.priorities.length > 0 ||
+      this.filterState.statuses.length > 0 ||
+      this.filterState.products.length > 0 ||
+      this.filterState.components.length > 0
+    );
+  }
+
+  getFilterDescription(): string {
+    const parts: string[] = [];
+    if (this.filterState.severities.length > 0) {
+      parts.push(`Severity: ${this.filterState.severities.join(', ')}`);
+    }
+    if (this.filterState.priorities.length > 0) {
+      parts.push(`Priority: ${this.filterState.priorities.join(', ')}`);
+    }
+    if (this.filterState.statuses.length > 0) {
+      parts.push(`Status: ${this.filterState.statuses.join(', ')}`);
+    }
+    if (this.filterState.products.length > 0) {
+      parts.push(`Product: ${this.filterState.products.join(', ')}`);
+    }
+    if (this.filterState.components.length > 0) {
+      parts.push(`Component: ${this.filterState.components.join(', ')}`);
+    }
+    if (this.filterState.versions.length > 0) {
+      parts.push(`Version: ${this.filterState.versions.join(', ')}`);
+    }
+    if (this.filterState.keywords.length > 0) {
+      parts.push(`Keywords: ${this.filterState.keywords.join(', ')}`);
+    }
+    return parts.length > 0 ? `$(filter) ${parts.join(' | ')}` : '';
+  }
+
+  getBugs(): Bug[] {
+    return this.bugs;
   }
 
   getParent(): undefined {
