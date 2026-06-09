@@ -89,12 +89,17 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^18.0.0",
-    "typescript": "^5.3.0"
+    "@types/vscode": "^1.85.0",
+    "@vitest/coverage-v8": "^3.2.6",
+    "typescript": "^5.3.0",
+    "vitest": "^3.2.6"
   },
   "dependencies": {
     "zod": "^3.23.0"
